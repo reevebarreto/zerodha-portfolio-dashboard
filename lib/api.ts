@@ -69,6 +69,8 @@ export const api = {
   buffett: {
     nifty50: () => apiFetch<BuffettResponse>("/buffett/nifty50"),
     myHoldings: () => apiFetch<BuffettHoldings>("/buffett/my-holdings"),
+    scores: (budget: number, topN: number) =>
+      apiFetch<any>(`/buffett/scores?budget=${budget}&topN=${topN}`),
   },
 };
 

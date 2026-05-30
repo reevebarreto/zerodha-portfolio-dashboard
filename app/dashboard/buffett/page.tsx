@@ -5,8 +5,8 @@ import useSWR from "swr";
 import { formatINR, formatINRShort, formatPercent } from "@/lib/format";
 import { BuffettLoadingFeed } from "@/components/BuffettLoadingFeed";
 import { CriteriaSquare } from "@/components/CriteriaSquare";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { api } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 interface ScoredStock {
   symbol: string;
@@ -68,17 +68,48 @@ export default function BuffettPage() {
     return () => clearTimeout(timer);
   }, [budgetInput]);
 
+  const router = useRouter();
+
+  // Fetch Buffett scores with proper caching and session handling
   const { data, isLoading, mutate } = useSWR(
-    `/api/buffett/scores?budget=${budget}&topN=${topN}`,
-    fetcher,
+    `buffett/scores/${budget}/${topN}`,
+    () => api.buffett.scores(budget, topN),
     {
       revalidateOnFocus: false,
-      dedupingInterval: 60000,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000, // Don't refetch within 1 minute
       refreshInterval: (data) => (data?.status === "calculating" ? 5000 : 0),
+      onError: (error) => {
+        // Handle session expiry
+        if (
+          error?.message?.includes("Session expired") ||
+          error?.message?.includes("Authentication failed")
+        ) {
+          router.push("/login");
+        }
+      },
     },
   );
 
-  const { data: myHoldings } = useSWR("/api/buffett/my-holdings", fetcher);
+  // Fetch user's holdings with proper caching and session handling
+  const { data: myHoldings } = useSWR(
+    "buffett/my-holdings",
+    () => api.buffett.myHoldings(),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 300000, // Don't refetch within 5 minutes
+      onError: (error) => {
+        // Handle session expiry
+        if (
+          error?.message?.includes("Session expired") ||
+          error?.message?.includes("Authentication failed")
+        ) {
+          router.push("/login");
+        }
+      },
+    },
+  );
 
   // Use allocation from API (already calculated server-side)
   const allocation = data?.scores || [];

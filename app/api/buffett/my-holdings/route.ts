@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { scoreAllNifty50 } from "@/lib/buffettScorer";
 import { getKiteClient } from "@/lib/kite-client";
+import NodeCache from "node-cache";
 
 export const runtime = "nodejs";
 
+// Cache holdings for 5 minutes to avoid repeated Kite API calls
+const holdingsCache = new NodeCache({ stdTTL: 300 });
+const CACHE_KEY = "my_holdings_enriched";
+
 export async function GET() {
   try {
+    // Check cache first
+    const cached = holdingsCache.get(CACHE_KEY);
+    if (cached) {
+      console.log("[API] Returning cached my-holdings data");
+      return NextResponse.json(cached);
+    }
+
     const kite = getKiteClient();
 
     // Check if user is authenticated
@@ -61,7 +73,13 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ holdings: enriched });
+    const response = { holdings: enriched, authenticated: true };
+
+    // Cache the enriched holdings
+    holdingsCache.set(CACHE_KEY, response);
+    console.log("[API] Cached my-holdings data for 5 minutes");
+
+    return NextResponse.json(response);
   } catch (err: any) {
     console.error("Error in /api/buffett/my-holdings:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
