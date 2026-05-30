@@ -90,6 +90,38 @@ export async function GET() {
     return NextResponse.json(enrichedFunds);
   } catch (error: any) {
     console.error("Error fetching mutual funds:", error);
+
+    // Handle session expiry
+    if (error.message === "SESSION_EXPIRED") {
+      return NextResponse.json(
+        {
+          error: true,
+          message: "Session expired. Please login again.",
+          sessionExpired: true,
+        },
+        { status: 401 },
+      );
+    }
+
+    // Handle token errors from Kite API
+    if (
+      error.message?.includes("api_key") ||
+      error.message?.includes("access_token") ||
+      error.message?.includes("TokenException")
+    ) {
+      // Clear the invalid session
+      const { deleteSession } = require("@/lib/db");
+      deleteSession();
+      return NextResponse.json(
+        {
+          error: true,
+          message: "Authentication failed. Please login again.",
+          sessionExpired: true,
+        },
+        { status: 401 },
+      );
+    }
+
     return NextResponse.json(
       { error: true, message: error.message },
       { status: error.message.includes("Not authenticated") ? 401 : 500 },

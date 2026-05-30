@@ -4,11 +4,27 @@
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { isMarketOpen } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 // Refresh interval: 60 seconds during market hours, 5 minutes otherwise
 const getRefreshInterval = () => {
   return isMarketOpen() ? 60000 : 300000;
 };
+
+// Global error handler for session expiry
+function handleSessionExpiry(error: any) {
+  if (
+    error?.sessionExpired ||
+    error?.message?.includes("Session expired") ||
+    error?.message?.includes("Authentication failed")
+  ) {
+    // Redirect to login
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  }
+}
 
 export function useAuthStatus() {
   return useSWR("auth/status", () => api.auth.status(), {
@@ -21,12 +37,14 @@ export function useOverview() {
   return useSWR("portfolio/overview", () => api.portfolio.overview(), {
     refreshInterval: getRefreshInterval(),
     revalidateOnFocus: true,
+    onError: handleSessionExpiry,
   });
 }
 
 export function useHoldings() {
   return useSWR("holdings", () => api.holdings.all(), {
     refreshInterval: getRefreshInterval(),
+    onError: handleSessionExpiry,
   });
 }
 
@@ -49,6 +67,7 @@ export function useHoldingDetail(symbol: string | null) {
 export function useMutualFunds() {
   return useSWR("mutualfunds", () => api.mutualfunds.all(), {
     refreshInterval: 300000, // 5 minutes (MF NAV updates once daily)
+    onError: handleSessionExpiry,
   });
 }
 

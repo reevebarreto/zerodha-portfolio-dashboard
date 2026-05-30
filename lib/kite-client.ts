@@ -19,7 +19,20 @@ export function getAuthenticatedKiteClient(): any {
   const session = getSession();
 
   if (!session || !session.access_token) {
-    throw new Error("Not authenticated. Please login first.");
+    throw new Error("SESSION_EXPIRED");
+  }
+
+  // Check if session is older than 24 hours (Kite tokens expire daily)
+  const createdAt = new Date(session.created_at);
+  const now = new Date();
+  const hoursSinceCreation =
+    (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
+  if (hoursSinceCreation > 24) {
+    // Session expired, clear it
+    const { deleteSession } = require("./db");
+    deleteSession();
+    throw new Error("SESSION_EXPIRED");
   }
 
   kite.setAccessToken(session.access_token);
