@@ -9,10 +9,13 @@ export function formatINR(amount: number): string {
 }
 
 export function formatINRShort(amount: number): string {
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`;
-  return `₹${amount}`;
+  // Round to 2 decimal places first to avoid floating point errors
+  const rounded = Math.round(amount * 100) / 100;
+
+  if (rounded >= 10000000) return `₹${(rounded / 10000000).toFixed(1)}Cr`;
+  if (rounded >= 100000) return `₹${(rounded / 100000).toFixed(1)}L`;
+  if (rounded >= 1000) return `₹${(rounded / 1000).toFixed(0)}K`;
+  return `₹${rounded.toFixed(2)}`;
 }
 
 export function formatPercent(value: number, decimals: number = 2): string {

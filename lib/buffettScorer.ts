@@ -117,7 +117,8 @@ export async function fetchFundamentals(
 
     const fundamentals: Fundamentals = {
       symbol,
-      roe: keys.returnOnEquity ?? null,
+      // ROE is in financialData, not defaultKeyStatistics
+      roe: fin.returnOnEquity ?? null,
       // yahoo-finance2 returns D/E as a clean ratio (not ×100 like the raw API)
       // so NO divide-by-100 needed here anymore
       debtToEquity: fin.debtToEquity ?? null,
