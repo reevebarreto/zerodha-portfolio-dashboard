@@ -1,3 +1,6 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
 /**
  * Utility functions for formatting and calculations
  */
@@ -162,10 +165,10 @@ export function formatDateTime(dateString: string): string {
 }
 
 /**
- * Combine class names
+ * Combine class names with tailwind-merge
  */
-export function cn(...classes: (string | boolean | undefined)[]): string {
-  return classes.filter(Boolean).join(" ");
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
 // Made with Bob
