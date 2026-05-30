@@ -187,6 +187,32 @@ export default function DashboardPage() {
             <p className="text-text-secondary">No mutual funds found</p>
           )}
         </div>
+
+        {/* Buffett Score Card */}
+        <div className="bg-bg-primary rounded-xl p-6 border border-border-default">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-text-primary">
+              Buffett Score
+            </h2>
+            <a
+              href="/dashboard/buffett"
+              className="text-sm text-accent-blue hover:underline"
+            >
+              View analysis →
+            </a>
+          </div>
+          <p className="text-sm text-text-secondary mb-4">
+            Discover which Nifty 50 stocks align with Warren Buffett's
+            investment principles. Get personalized allocation recommendations
+            based on fundamental analysis.
+          </p>
+          <a
+            href="/dashboard/buffett"
+            className="inline-block px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium"
+          >
+            Analyze Nifty 50 Stocks
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -92,14 +92,11 @@ export async function getMFHoldings(): Promise<any[]> {
 }
 
 export async function getMFSIPs(): Promise<any[]> {
-  const kite = getAuthenticatedKiteClient();
-  try {
-    const sips = await kite.getMFSIPs();
-    return sips;
-  } catch (error: any) {
-    console.error("Error fetching SIPs:", error);
-    throw new Error(`Failed to fetch SIPs: ${error.message}`);
-  }
+  // Note: getMFSIPs is not available in the Kite Connect Node.js SDK
+  // SIP data would need to be fetched through a different method or API
+  // For now, returning empty array
+  console.warn("getMFSIPs: SIP data not available through Kite Connect SDK");
+  return [];
 }
 
 export async function getQuote(instruments: string[]): Promise<any> {
