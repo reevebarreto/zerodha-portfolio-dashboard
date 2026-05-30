@@ -47,6 +47,10 @@ interface ScoredStock {
     | "negative"
     | null;
   recommendation: string | null;
+  priceChange1D: number | null;
+  priceChange1M: number | null;
+  priceChange1Y: number | null;
+  priceChange5Y: number | null;
 }
 
 interface AllocationStock extends ScoredStock {
@@ -330,6 +334,9 @@ export default function BuffettPage() {
                   Price
                 </th>
                 <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
+                  Trends
+                </th>
+                <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
                   Score
                 </th>
                 <th
@@ -575,6 +582,41 @@ function AllocationRow({
         {stock.currentPrice !== null
           ? `₹${stock.currentPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
           : "—"}
+      </td>
+      <td className="px-4 py-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {[
+            { label: "1D", value: stock.priceChange1D },
+            { label: "1M", value: stock.priceChange1M },
+            { label: "1Y", value: stock.priceChange1Y },
+            { label: "5Y", value: stock.priceChange5Y },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              style={{ display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <span
+                className="text-xs text-text-secondary"
+                style={{ width: 20 }}
+              >
+                {label}
+              </span>
+              <span
+                className="text-xs font-medium"
+                style={{
+                  color:
+                    value === null
+                      ? "#9b9b9b"
+                      : value >= 0
+                        ? "#16a34a"
+                        : "#dc2626",
+                }}
+              >
+                {value !== null ? formatPercent(value) : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
       </td>
       <td
         className="px-4 py-3 text-sm font-medium"

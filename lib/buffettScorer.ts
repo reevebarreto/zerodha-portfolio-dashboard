@@ -89,6 +89,12 @@ export interface Fundamentals {
     | "negative"
     | null;
 
+  // Price trends (percentage change)
+  priceChange1D: number | null; // 1 day
+  priceChange1M: number | null; // 1 month
+  priceChange1Y: number | null; // 1 year
+  priceChange5Y: number | null; // 5 years
+
   fetchedAt: string;
 }
 
@@ -189,6 +195,89 @@ function computeEPSGrowth(
   } catch {
     return null;
   }
+}
+
+// Helper: Calculate price trends from historical data
+async function calculatePriceTrends(yahooSymbol: string): Promise<{
+  priceChange1D: number | null;
+  priceChange1M: number | null;
+  priceChange1Y: number | null;
+  priceChange5Y: number | null;
+}> {
+  const trends = {
+    priceChange1D: null as number | null,
+    priceChange1M: null as number | null,
+    priceChange1Y: null as number | null,
+    priceChange5Y: null as number | null,
+  };
+
+  try {
+    const now = new Date();
+    const fiveYearsAgo = new Date(
+      now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000,
+    );
+
+    // Fetch historical prices for the last 5 years
+    const history = await yahooFinance.historical(yahooSymbol, {
+      period1: fiveYearsAgo,
+      period2: now,
+      interval: "1d",
+    });
+
+    if (!Array.isArray(history) || history.length === 0) return trends;
+
+    // Sort by date (newest first)
+    const sorted = history.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const currentPrice = sorted[0]?.close;
+    if (!currentPrice) return trends;
+
+    // 1 day change (compare to yesterday)
+    if (sorted.length >= 2) {
+      const yesterdayPrice = sorted[1]?.close;
+      if (yesterdayPrice) {
+        trends.priceChange1D =
+          ((currentPrice - yesterdayPrice) / yesterdayPrice) * 100;
+      }
+    }
+
+    // 1 month change (approximately 21 trading days)
+    const oneMonthIndex = Math.min(21, sorted.length - 1);
+    if (sorted[oneMonthIndex]) {
+      const oneMonthPrice = sorted[oneMonthIndex].close;
+      if (oneMonthPrice) {
+        trends.priceChange1M =
+          ((currentPrice - oneMonthPrice) / oneMonthPrice) * 100;
+      }
+    }
+
+    // 1 year change (approximately 252 trading days)
+    const oneYearIndex = Math.min(252, sorted.length - 1);
+    if (sorted[oneYearIndex]) {
+      const oneYearPrice = sorted[oneYearIndex].close;
+      if (oneYearPrice) {
+        trends.priceChange1Y =
+          ((currentPrice - oneYearPrice) / oneYearPrice) * 100;
+      }
+    }
+
+    // 5 year change (approximately 1260 trading days)
+    const fiveYearIndex = Math.min(1260, sorted.length - 1);
+    if (sorted[fiveYearIndex]) {
+      const fiveYearPrice = sorted[fiveYearIndex].close;
+      if (fiveYearPrice) {
+        trends.priceChange5Y =
+          ((currentPrice - fiveYearPrice) / fiveYearPrice) * 100;
+      }
+    }
+  } catch (err: any) {
+    console.warn(
+      `[Buffett] Could not fetch price trends for ${yahooSymbol}:`,
+      err.message,
+    );
+  }
+
+  return trends;
 }
 
 // Fetch fundamentals for a single stock from Yahoo Finance
@@ -302,6 +391,9 @@ export async function fetchFundamentals(
       }
     }
 
+    // Fetch price trends
+    const priceTrends = await calculatePriceTrends(yahooSymbol);
+
     const fundamentals: Fundamentals = {
       symbol,
 
@@ -333,6 +425,12 @@ export async function fetchFundamentals(
           : [],
       epsGrowthTrend:
         incomeStatements.length > 0 ? computeEPSGrowth(incomeStatements) : null,
+
+      // Price trends
+      priceChange1D: priceTrends.priceChange1D,
+      priceChange1M: priceTrends.priceChange1M,
+      priceChange1Y: priceTrends.priceChange1Y,
+      priceChange5Y: priceTrends.priceChange5Y,
 
       fetchedAt: new Date().toISOString(),
     };
