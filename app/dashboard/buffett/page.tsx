@@ -13,13 +13,19 @@ interface ScoredStock {
   score: number;
   grade: "A" | "B" | "C" | "D";
   breakdown: {
-    roe: number;
     debtEquity: number;
-    margin: number;
+    currentRatio: number;
+    priceToBook: number;
+    roe: number;
+    roeHistorical: number;
+    roa: number;
+    epsGrowth: number;
     pe: number;
-    fcf: number;
-    dividend: number;
+    fcfRevenue: number;
+    interestCoverage: number;
+    margin: number;
   };
+  // Fundamentals
   roe: number | null;
   debtToEquity: number | null;
   profitMargin: number | null;
@@ -27,6 +33,19 @@ interface ScoredStock {
   dividendYield: number | null;
   freeCashFlow: number | null;
   currentPrice: number | null;
+  roa: number | null;
+  priceToBook: number | null;
+  currentRatio: number | null;
+  fcfToRevenue: number | null;
+  interestCoverage: number | null;
+  historicalROE: number[];
+  epsGrowthTrend:
+    | "growing"
+    | "flat"
+    | "mixed"
+    | "declining"
+    | "negative"
+    | null;
   recommendation: string | null;
 }
 
@@ -37,13 +56,13 @@ interface AllocationStock extends ScoredStock {
 }
 
 export default function BuffettPage() {
-  // Change 3: Separate slider display value from committed value
+  // Separate slider display value from committed value
   const [budgetInput, setBudgetInput] = useState(100000);
   const [budget, setBudget] = useState(100000);
   const [sliderVal, setSliderVal] = useState(12);
   const [topN, setTopN] = useState(12);
 
-  // Change 3: Budget debounce with 400ms delay
+  // Budget debounce with 400ms delay
   useEffect(() => {
     const timer = setTimeout(() => setBudget(budgetInput), 400);
     return () => clearTimeout(timer);
@@ -88,7 +107,7 @@ export default function BuffettPage() {
     };
   }, [allocation, holdingsMap, budget]);
 
-  // Change 4: Use BuffettLoadingFeed component
+  // Use BuffettLoadingFeed component
   if (isLoading || data?.status === "calculating") {
     return <BuffettLoadingFeed onComplete={() => mutate()} />;
   }
@@ -110,7 +129,7 @@ export default function BuffettPage() {
   }
 
   return (
-    <div className="space-y-6 m-8">
+    <div className="space-y-6 m-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-medium text-text-primary mb-1">
@@ -121,7 +140,7 @@ export default function BuffettPage() {
         </p>
       </div>
 
-      {/* Change 1: Info callout explaining B/C grades */}
+      {/* Updated info callout with new grade thresholds */}
       <div
         style={{
           background: "var(--color-background-secondary)",
@@ -136,13 +155,12 @@ export default function BuffettPage() {
       >
         <span style={{ fontSize: 16 }}>ℹ️</span>
         <p style={{ lineHeight: 1.5 }}>
-          Most Nifty 50 stocks score B or C. This is expected — Indian markets
-          trade at premium valuations, which lowers the P/E score. A score above
-          55 is strong in the Indian context.
+          <strong>Grades:</strong> A = 65+, B = 50–64, C = 35–49, D = {"<"}35.
+          Scores can go negative for stocks that fail multiple criteria.
         </p>
       </div>
 
-      {/* Controls - Change 2: Added margin-bottom: 32px */}
+      {/* Controls */}
       <div
         className="bg-bg-primary border border-border-default rounded-xl p-5 space-y-4"
         style={{ marginBottom: 32 }}
@@ -179,7 +197,7 @@ export default function BuffettPage() {
           </div>
         </div>
 
-        {/* TopN slider - Change 3: Debounced */}
+        {/* TopN slider - Debounced */}
         <div>
           <label className="text-xs text-text-secondary mb-2 block">
             Number of stocks to invest in
@@ -211,18 +229,23 @@ export default function BuffettPage() {
         </div>
       </div>
 
-      {/* Criteria explanation cards - Change 2: Increased padding and gap */}
+      {/* Criteria explanation cards - Updated for 11 criteria */}
       <div
         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6"
         style={{ gap: 10, marginBottom: 28 }}
       >
         {[
-          { label: "ROE", desc: "Return on equity >20%", max: 20 },
-          { label: "Debt/Equity", desc: "Low debt <0.3", max: 20 },
-          { label: "Net Margin", desc: "Profit margin >20%", max: 20 },
-          { label: "P/E Ratio", desc: "Fair valuation <15", max: 20 },
-          { label: "Free Cash Flow", desc: "Positive FCF", max: 10 },
-          { label: "Dividend", desc: "Yield >1%", max: 10 },
+          { label: "Debt/Equity", desc: "Low debt <0.3", max: 15 },
+          { label: "Current Ratio", desc: "Liquidity 1.5–2.5", max: 10 },
+          { label: "Price/Book", desc: "Value <1.5", max: 10 },
+          { label: "ROE", desc: "Return >25%", max: 10 },
+          { label: "ROE Trend", desc: "Consistent 3yr", max: 5 },
+          { label: "ROA", desc: "Asset return >12%", max: 10 },
+          { label: "EPS Growth", desc: "Growing trend", max: 10 },
+          { label: "P/E Ratio", desc: "Fair value <15", max: 10 },
+          { label: "FCF/Revenue", desc: "Cash gen >15%", max: 10 },
+          { label: "Interest Cov", desc: "Debt service >10×", max: 5 },
+          { label: "Net Margin", desc: "Profit >20%", max: 5 },
         ].map((c) => (
           <div
             key={c.label}
@@ -238,7 +261,7 @@ export default function BuffettPage() {
         ))}
       </div>
 
-      {/* Summary metrics - Change 2: Added margin-bottom: 24px */}
+      {/* Summary metrics */}
       <div className="grid grid-cols-3 gap-4" style={{ marginBottom: 24 }}>
         <div className="bg-bg-secondary rounded-lg p-4">
           <p className="text-xs text-text-secondary mb-1">Stocks selected</p>
@@ -272,7 +295,6 @@ export default function BuffettPage() {
                 <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
                   Symbol
                 </th>
-                {/* Change 6: Added Price column */}
                 <th className="text-right text-xs font-medium text-text-secondary px-4 py-3">
                   Price
                 </th>
@@ -281,7 +303,7 @@ export default function BuffettPage() {
                 </th>
                 <th
                   className="text-left text-xs font-medium text-text-secondary px-4 py-3"
-                  title="A = 75+, B = 60–74, C = 45–59, D = <45"
+                  title="A = 65+, B = 50–64, C = 35–49, D = <35"
                   style={{ cursor: "help" }}
                 >
                   Grade
@@ -324,7 +346,7 @@ export default function BuffettPage() {
         </div>
       </div>
 
-      {/* My holdings section - Change 7: Redesigned cards */}
+      {/* My holdings section - Redesigned cards */}
       {myHoldings?.holdings && myHoldings.holdings.length > 0 && (
         <div style={{ marginTop: 48 }}>
           <h2 className="text-lg font-medium text-text-primary mb-4">
@@ -379,64 +401,126 @@ function AllocationRow({
     D: "bg-accent-red text-white",
   };
 
-  // Change 5: Build criteria values for tooltips
+  // Build criteria values for tooltips - ALL 11 CRITERIA
   const criteriaValues = [
-    {
-      key: "roe",
-      label: "Return on Equity",
-      score: stock.breakdown.roe,
-      max: 20,
-      value: stock.roe !== null ? `${(stock.roe * 100).toFixed(1)}%` : "N/A",
-    },
+    // Group 1: Valuation
     {
       key: "debtEquity",
       label: "Debt / Equity",
       score: stock.breakdown.debtEquity,
-      max: 20,
+      max: 15,
       value:
         stock.debtToEquity !== null ? stock.debtToEquity.toFixed(2) : "N/A",
     },
     {
-      key: "margin",
-      label: "Net Margin",
-      score: stock.breakdown.margin,
-      max: 20,
+      key: "currentRatio",
+      label: "Current Ratio",
+      score: stock.breakdown.currentRatio,
+      max: 10,
       value:
-        stock.profitMargin !== null
-          ? `${(stock.profitMargin * 100).toFixed(1)}%`
-          : "N/A",
+        stock.currentRatio !== null ? stock.currentRatio.toFixed(2) : "N/A",
+    },
+    {
+      key: "priceToBook",
+      label: "Price / Book",
+      score: stock.breakdown.priceToBook,
+      max: 10,
+      value:
+        stock.priceToBook !== null ? `${stock.priceToBook.toFixed(1)}×` : "N/A",
+    },
+    // Group 2: Profitability
+    {
+      key: "roe",
+      label: "Return on Equity",
+      score: stock.breakdown.roe,
+      max: 10,
+      value: stock.roe !== null ? `${(stock.roe * 100).toFixed(1)}%` : "N/A",
+    },
+    {
+      key: "roeHistorical",
+      label: "ROE Trend",
+      score: stock.breakdown.roeHistorical,
+      max: 5,
+      value:
+        stock.historicalROE.length >= 2
+          ? stock.historicalROE.every((r) => r > 0.08)
+            ? "Consistent (3 yrs)"
+            : stock.historicalROE.filter((r) => r > 0.08).length >= 2
+              ? "Mostly positive"
+              : "Declining"
+          : "Insufficient data",
+    },
+    {
+      key: "roa",
+      label: "Return on Assets",
+      score: stock.breakdown.roa,
+      max: 10,
+      value: stock.roa !== null ? `${(stock.roa * 100).toFixed(1)}%` : "N/A",
+    },
+    // Group 3: Growth
+    {
+      key: "epsGrowth",
+      label: "EPS Growth",
+      score: stock.breakdown.epsGrowth,
+      max: 10,
+      value: stock.epsGrowthTrend
+        ? stock.epsGrowthTrend === "growing"
+          ? "Growing ✓"
+          : stock.epsGrowthTrend === "declining"
+            ? "Declining ✗"
+            : stock.epsGrowthTrend === "negative"
+              ? "Negative ✗"
+              : stock.epsGrowthTrend === "flat"
+                ? "Flat"
+                : "Mixed"
+        : "N/A",
     },
     {
       key: "pe",
       label: "P/E Ratio",
       score: stock.breakdown.pe,
-      max: 20,
+      max: 10,
       value:
         stock.trailingPE !== null ? `${stock.trailingPE.toFixed(1)}×` : "N/A",
     },
+    // Group 4: Cash & Margins
     {
-      key: "fcf",
-      label: "Free Cash Flow",
-      score: stock.breakdown.fcf,
+      key: "fcfRevenue",
+      label: "FCF / Revenue",
+      score: stock.breakdown.fcfRevenue,
       max: 10,
       value:
-        stock.freeCashFlow !== null
-          ? stock.freeCashFlow > 0
-            ? "Positive ✓"
-            : "Negative ✗"
+        stock.fcfToRevenue !== null
+          ? `${(stock.fcfToRevenue * 100).toFixed(1)}%`
           : "N/A",
     },
     {
-      key: "dividend",
-      label: "Dividend Yield",
-      score: stock.breakdown.dividend,
-      max: 10,
+      key: "interestCoverage",
+      label: "Interest Coverage",
+      score: stock.breakdown.interestCoverage,
+      max: 5,
       value:
-        stock.dividendYield !== null && stock.dividendYield > 0
-          ? `${(stock.dividendYield * 100).toFixed(2)}%`
-          : "None",
+        stock.interestCoverage !== null
+          ? stock.interestCoverage >= 999
+            ? "No debt ✓"
+            : `${stock.interestCoverage.toFixed(1)}×`
+          : "N/A",
+    },
+    {
+      key: "margin",
+      label: "Net Margin",
+      score: stock.breakdown.margin,
+      max: 5,
+      value:
+        stock.profitMargin !== null
+          ? `${(stock.profitMargin * 100).toFixed(1)}%`
+          : "N/A",
     },
   ];
+
+  // Score color: green ≥65, red <0, default otherwise
+  const scoreColor =
+    stock.score >= 65 ? "#639922" : stock.score < 0 ? "#E24B4A" : "inherit";
 
   return (
     <tr
@@ -456,13 +540,15 @@ function AllocationRow({
           )}
         </div>
       </td>
-      {/* Change 6: Price column */}
       <td className="px-4 py-3 text-right text-sm text-text-primary">
         {stock.currentPrice !== null
           ? `₹${stock.currentPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
           : "—"}
       </td>
-      <td className="px-4 py-3 text-sm font-medium text-text-primary">
+      <td
+        className="px-4 py-3 text-sm font-medium"
+        style={{ color: scoreColor }}
+      >
         {stock.score}
       </td>
       <td className="px-4 py-3">
@@ -473,9 +559,52 @@ function AllocationRow({
         </span>
       </td>
       <td className="px-4 py-3">
-        {/* Change 5: Use CriteriaSquare with tooltips, Change 2: increased gap */}
-        <div style={{ display: "flex", gap: 4 }}>
-          {criteriaValues.map((c) => (
+        {/* 11 criteria squares with visual grouping */}
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {/* Group 1: Valuation (D/E, CR, P/B) */}
+          {criteriaValues.slice(0, 3).map((c) => (
+            <CriteriaSquare
+              key={c.key}
+              score={c.score}
+              max={c.max}
+              label={c.label}
+              value={c.value}
+            />
+          ))}
+          <div
+            style={{ width: 1, height: 16, background: "rgba(0,0,0,0.1)" }}
+          />
+
+          {/* Group 2: Profitability (ROE, ROE↗, ROA) */}
+          {criteriaValues.slice(3, 6).map((c) => (
+            <CriteriaSquare
+              key={c.key}
+              score={c.score}
+              max={c.max}
+              label={c.label}
+              value={c.value}
+            />
+          ))}
+          <div
+            style={{ width: 1, height: 16, background: "rgba(0,0,0,0.1)" }}
+          />
+
+          {/* Group 3: Growth (EPS, P/E) */}
+          {criteriaValues.slice(6, 8).map((c) => (
+            <CriteriaSquare
+              key={c.key}
+              score={c.score}
+              max={c.max}
+              label={c.label}
+              value={c.value}
+            />
+          ))}
+          <div
+            style={{ width: 1, height: 16, background: "rgba(0,0,0,0.1)" }}
+          />
+
+          {/* Group 4: Cash & Margins (FCF/R, IC, Margin) */}
+          {criteriaValues.slice(8, 11).map((c) => (
             <CriteriaSquare
               key={c.key}
               score={c.score}
@@ -531,7 +660,7 @@ function ProgressBar({
   );
 }
 
-// Change 7: Redesigned My Holding Card
+// Redesigned My Holding Card with +X / −Y breakdown
 function MyHoldingCard({
   holding,
   allocation,
@@ -555,70 +684,132 @@ function MyHoldingCard({
   const pnl = holding.currentValue - holding.investedValue;
   const pnlPercent = (pnl / holding.investedValue) * 100;
 
-  // Build criteria values for this holding
+  // Calculate +X / −Y breakdown
+  const positivePoints = Object.values(holding.buffettScore.breakdown)
+    .filter((v: any) => v > 0)
+    .reduce((a: number, b: any) => a + b, 0);
+  const negativePoints = Object.values(holding.buffettScore.breakdown)
+    .filter((v: any) => v < 0)
+    .reduce((a: number, b: any) => a + b, 0);
+
+  // Build criteria values for this holding - ALL 11 CRITERIA
   const criteriaValues = [
-    {
-      key: "roe",
-      label: "ROE",
-      score: holding.buffettScore.breakdown.roe,
-      max: 20,
-      value:
-        holding.buffettScore.roe !== null
-          ? `${(holding.buffettScore.roe * 100).toFixed(1)}%`
-          : "N/A",
-    },
     {
       key: "debtEquity",
       label: "D/E",
       score: holding.buffettScore.breakdown.debtEquity,
-      max: 20,
+      max: 15,
       value:
         holding.buffettScore.debtToEquity !== null
           ? holding.buffettScore.debtToEquity.toFixed(2)
           : "N/A",
     },
     {
-      key: "margin",
-      label: "Margin",
-      score: holding.buffettScore.breakdown.margin,
-      max: 20,
+      key: "currentRatio",
+      label: "CR",
+      score: holding.buffettScore.breakdown.currentRatio,
+      max: 10,
       value:
-        holding.buffettScore.profitMargin !== null
-          ? `${(holding.buffettScore.profitMargin * 100).toFixed(1)}%`
+        holding.buffettScore.currentRatio !== null
+          ? holding.buffettScore.currentRatio.toFixed(2)
           : "N/A",
+    },
+    {
+      key: "priceToBook",
+      label: "P/B",
+      score: holding.buffettScore.breakdown.priceToBook,
+      max: 10,
+      value:
+        holding.buffettScore.priceToBook !== null
+          ? `${holding.buffettScore.priceToBook.toFixed(1)}×`
+          : "N/A",
+    },
+    {
+      key: "roe",
+      label: "ROE",
+      score: holding.buffettScore.breakdown.roe,
+      max: 10,
+      value:
+        holding.buffettScore.roe !== null
+          ? `${(holding.buffettScore.roe * 100).toFixed(1)}%`
+          : "N/A",
+    },
+    {
+      key: "roeHistorical",
+      label: "ROE↗",
+      score: holding.buffettScore.breakdown.roeHistorical,
+      max: 5,
+      value:
+        holding.buffettScore.historicalROE.length >= 2
+          ? holding.buffettScore.historicalROE.every((r: number) => r > 0.08)
+            ? "Consistent"
+            : "Mixed"
+          : "N/A",
+    },
+    {
+      key: "roa",
+      label: "ROA",
+      score: holding.buffettScore.breakdown.roa,
+      max: 10,
+      value:
+        holding.buffettScore.roa !== null
+          ? `${(holding.buffettScore.roa * 100).toFixed(1)}%`
+          : "N/A",
+    },
+    {
+      key: "epsGrowth",
+      label: "EPS",
+      score: holding.buffettScore.breakdown.epsGrowth,
+      max: 10,
+      value: holding.buffettScore.epsGrowthTrend
+        ? holding.buffettScore.epsGrowthTrend === "growing"
+          ? "Growing ✓"
+          : holding.buffettScore.epsGrowthTrend === "declining"
+            ? "Declining ✗"
+            : "Mixed"
+        : "N/A",
     },
     {
       key: "pe",
       label: "P/E",
       score: holding.buffettScore.breakdown.pe,
-      max: 20,
+      max: 10,
       value:
         holding.buffettScore.trailingPE !== null
           ? `${holding.buffettScore.trailingPE.toFixed(1)}×`
           : "N/A",
     },
     {
-      key: "fcf",
-      label: "FCF",
-      score: holding.buffettScore.breakdown.fcf,
+      key: "fcfRevenue",
+      label: "FCF/R",
+      score: holding.buffettScore.breakdown.fcfRevenue,
       max: 10,
       value:
-        holding.buffettScore.freeCashFlow !== null
-          ? holding.buffettScore.freeCashFlow > 0
-            ? "Positive ✓"
-            : "Negative ✗"
+        holding.buffettScore.fcfToRevenue !== null
+          ? `${(holding.buffettScore.fcfToRevenue * 100).toFixed(1)}%`
           : "N/A",
     },
     {
-      key: "dividend",
-      label: "Div",
-      score: holding.buffettScore.breakdown.dividend,
-      max: 10,
+      key: "interestCoverage",
+      label: "IC",
+      score: holding.buffettScore.breakdown.interestCoverage,
+      max: 5,
       value:
-        holding.buffettScore.dividendYield !== null &&
-        holding.buffettScore.dividendYield > 0
-          ? `${(holding.buffettScore.dividendYield * 100).toFixed(2)}%`
-          : "None",
+        holding.buffettScore.interestCoverage !== null
+          ? holding.buffettScore.interestCoverage >= 999
+            ? "No debt ✓"
+            : `${holding.buffettScore.interestCoverage.toFixed(1)}×`
+          : "N/A",
+    },
+    {
+      key: "margin",
+      label: "Margin",
+      score: holding.buffettScore.breakdown.margin,
+      max: 5,
+      value:
+        holding.buffettScore.profitMargin !== null
+          ? `${(holding.buffettScore.profitMargin * 100).toFixed(1)}%`
+          : "N/A",
     },
   ];
 
@@ -632,7 +823,7 @@ function MyHoldingCard({
         border: "0.5px solid var(--color-border-tertiary)",
       }}
     >
-      {/* Row 1 - Header */}
+      {/* Row 1 - Header with +X / −Y breakdown */}
       <div
         style={{
           display: "flex",
@@ -658,6 +849,12 @@ function MyHoldingCard({
         </span>
         <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
           Score: {holding.buffettScore.score}
+        </span>
+        {/* +X / −Y breakdown */}
+        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+          <span style={{ color: "#639922" }}>+{positivePoints}</span>
+          {" / "}
+          <span style={{ color: "#E24B4A" }}>−{Math.abs(negativePoints)}</span>
         </span>
         <span
           style={{
